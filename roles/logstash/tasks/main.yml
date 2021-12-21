@@ -1,0 +1,20 @@
+---
+# tasks file for logstash
+- name: copy logstash config file
+  copy:
+    src: "{{ logstash_conf }}"
+    dest: "/etc/logstash/conf.d/logstash.conf"
+    mode: '0755'
+  register: logstashconf
+
+- name: start and enable logstash
+  service:
+    name: logstash
+    state: started
+    enabled: yes
+
+- name: restart logstash
+  service:
+    name: logstash
+    state: restarted
+  when: logstashconf.changed

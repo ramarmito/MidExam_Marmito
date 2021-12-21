@@ -1,0 +1,95 @@
+---
+# tasks file for httpd_centos
+- name: stop firewall
+  service:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+- name: start and enable httpd
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: create /var/www/domain/ for domain config
+  file:
+    path: "/var/www/{{ domain }}"
+    state: directory
+    owner: "{{ owmer }}"
+    group: "{{ group }}"
+    mode: '0755'
+
+- name: create var/www/domain/html
+  file:
+    path: "/var/www/{{ domain }}/html"
+    state: directory
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    mode: '0755'
+
+- name: create var/www/domain/log
+  file:
+    path: "/var/www/{{ domain }}/log"
+    state: directory
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    mode: '0755'
+
+- name: create var/www/domain/html
+  copy:
+    src: "{{ index_html }}"
+    dest: "/var/www/{{ domain }}/html/index.html"
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    mode: '0755'
+  register: index_html
+
+- name: create info.php
+  copy:
+    content: "<?php phpinfo();"
+    dest: "/var/www/{{ domain }}/html/info.php"
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    mode: '0755'
+  register: phpinfo
+
+- name: create /etc/httpd/sites-available
+  file:
+    path: "/etc/httpd/sites-available"
+    state: directory
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    mode: '0755'
+
+- name: create /etc/httpd/sites-enabled
+  file:
+    path: "/etc/httpd/sites-enabled"
+    state: directory
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    mode: '0755'
+
+- name: append optional files
+  lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    line: "IncludeOptional sites-enabled/*.conf"
+  register: httpd_conf
+
+- name: server virtual host
+  file:
+    src: "/etc/httpd/sites-available/{{ domain }}.conf"
+    dest: "/etc/httpd/sites-enabled/{{ domain }}.conf"
+    state: link
+
+- name: install python-utils
+  yum:
+    name: policycoreutils-python-utils
+    state: latest
+    update_cache: yes
+
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+  when: index_html.changed or phpinfo.changed or result.changed
